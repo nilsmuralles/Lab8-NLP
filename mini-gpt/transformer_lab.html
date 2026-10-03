@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Transformer Lab</title>
+<style>
+  :root{
+    --paper:#F5F6F2;
+    --card:#FFFFFF;
+    --ink:#1B2431;
+    --ink-soft:#5B6472;
+    --line:#E2E4DD;
+    --pos:#0F6E56;
+    --pos-bg:#E1F5EE;
+    --neg:#99231D;
+    --neg-bg:#FBE7E5;
+    --heat-0:#FDF7EA;
+    --heat-1:#F7DA9E;
+    --heat-2:#EFA93F;
+    --heat-3:#B96A0E;
+    --heat-4:#7A4508;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family: Arial, sans-serif;
+    padding:32px 20px 64px;
+  }
+  .wrap{max-width:1040px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  header h1{
+    font-family: Arial, sans-serif;
+    font-weight:600;
+    font-size:32px;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header p{margin:0;color:var(--ink-soft);font-size:14px;}
+
+  .loader{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    margin-bottom:24px;
+  }
+  .loadslot{flex:1;min-width:220px;}
+  .loadslot label{
+    display:block;font-size:12px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.04em;
+    color:var(--ink-soft);margin-bottom:6px;
+  }
+  .filebox{
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:13px;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:8px;
+  }
+  .filebox input{font-size:12px;max-width:150px;}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0;}
+  .status-dot.ok{background:var(--pos);}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:820px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px;
+  }
+  .panel h2{
+    font-family: Arial, sans-serif;
+    font-weight:600;
+    font-size:18px;
+    margin:0 0 14px;
+  }
+  textarea, input[type=text]{
+    width:100%;font-family: Arial, sans-serif;
+    font-size:14px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    resize:vertical;
+    background:#FAFBF8;
+    color:var(--ink);
+  }
+  button{
+    font-family: Arial, sans-serif;
+    margin-top:10px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  button:disabled{
+    background:#C8CBC2;
+    cursor:not-allowed;}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+  .result-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:600;
+    font-size:14px;
+    margin:14px 0 4px;
+  }
+  .result-badge.pos{background:var(--pos-bg);color:var(--pos);}
+  .result-badge.neg{background:var(--neg-bg);color:var(--neg);}
+
+  .heat-block{margin-top:16px;}
+  .heat-block h3{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--ink-soft);
+    margin:14px 0 6px;
+    font-weight:600;
+  }
+  .heat-heads{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;}
+
+  .heat-grid{
+    display:grid;
+    font-family: Arial, sans-serif;
+    font-size:9px;}
+  .heat-cell{
+    width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+  .heat-label{
+    font-size:9px;color:var(--ink-soft);writing-mode:vertical-rl;
+    text-orientation:mixed;padding-bottom:2px;
+  }
+  .heat-rowlabel{font-size:9px;color:var(--ink-soft);padding-right:4px;text-align:right;
+    display:flex;align-items:center;justify-content:flex-end;}
+
+  .gen-output{
+    margin-top:14px;font-family: Arial, sans-serif;font-size:13px;
+    background:#FAFBF8;border:1px solid var(--line);border-radius:8px;
+    padding:12px 14px;line-height:1.6;min-height:20px;
+  }
+  .slider-row{display:flex;align-items:center;gap:10px;margin-top:12px;}
+  .slider-row span{font-size:12px;color:var(--ink-soft);min-width:34px;}
+  input[type=range]{flex:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Proyecto 1</h1>
+  </header>
+
+  <div class="loader">
+    <div class="loadslot">
+      <label>encoder_weights.json</label>
+      <div class="filebox">
+        <input type="file" id="fileEnc" accept=".json">
+        <div class="status-dot" id="dotEnc"></div>
+      </div>
+    </div>
+    <div class="loadslot">
+      <label>gpt_weights.json</label>
+      <div class="filebox">
+        <input type="file" id="fileGpt" accept=".json">
+        <div class="status-dot" id="dotGpt"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>Analisis de sentimiento</h2>
+      <textarea id="clsInput" rows="2"></textarea>
+      <button id="btnCls" disabled>Analizar</button>
+      <div class="hint" id="clsHint">Carga encoder_weights.json arriba para habilitar este panel.</div>
+      <div id="clsResultWrap"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Generacion de texto</h2>
+      <input type="text" id="gptInput">
+      <div class="slider-row">
+        <span>0.5</span>
+        <input type="range" id="tempSlider" min="0.5" max="1.5" step="0.1" value="0.9">
+        <span>1.5</span>
+        <span id="tempVal">0.9</span>
+      </div>
+      <button id="btnGpt" disabled>Generar</button>
+      <div class="hint" id="gptHint">Carga gpt_weights.json arriba para habilitar este panel.</div>
+      <div id="gptResultWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// A: (m,n)  
+// B: (n,p)  ->  (m,p)
+function matmul(A, B) {
+  const m = A.length, n = B.length, p = B[0].length;
+  const out = Array.from({length: m}, () => new Array(p).fill(0));
+  for (let i = 0; i < m; i++) {
+    for (let k = 0; k < n; k++) {
+      const aik = A[i][k];
+      if (aik === 0) continue;
+      for (let j = 0; j < p; j++) out[i][j] += aik * B[k][j];
+    }
+  }
+  return out;
+}
+
+// suma un vector bias (p,) a cada fila de A (m,p)
+function addBias(A, b) {
+  return A.map(row => row.map((v, j) => v + b[j]));
+}
+
+// transpone una matriz (m,n) -> (n,m)
+function transpose(A) {
+  const m = A.length, n = A[0].length;
+  const out = Array.from({length: n}, () => new Array(m));
+  for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) out[j][i] = A[i][j];
+  return out;
+}
+
+// layer_norm: normaliza cada fila (media 0, std 1) y luego aplica gamma/beta
+function layerNorm(X, gamma, beta, eps = 1e-5) {
+  return X.map(row => {
+    const d = row.length;
+    const mean = row.reduce((a, b) => a + b, 0) / d;
+    const variance = row.reduce((a, b) => a + (b - mean) ** 2, 0) / d;
+    const std = Math.sqrt(variance + eps);
+    return row.map((v, j) => ((v - mean) / std) * gamma[j] + beta[j]);
+  });
+}
+
+// softmax de un solo vector (fila de scores),
+function softmaxRow(row) {
+  const finite = row.filter(v => v !== -Infinity);
+  const max = finite.length ? Math.max(...finite) : 0;
+  const exps = row.map(v => (v === -Infinity ? 0 : Math.exp(v - max)));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map(v => v / sum);
+}
+
+function relu(X) {
+  return X.map(row => row.map(v => Math.max(0, v)));
+}
+
+/* Igual que make_positional_encoding(), no es un parametro aprendido, por eso no viene en el JSON y hay que recalcularlo aqui. */
+function positionalEncoding(maxLen, dModel) {
+  const pe = Array.from({length: maxLen}, () => new Array(dModel).fill(0));
+  for (let pos = 0; pos < maxLen; pos++) {
+    for (let i = 0; i < dModel; i += 2) {
+      const div = Math.exp(-Math.log(10000.0) * i / dModel);
+      pe[pos][i] = Math.sin(pos * div);
+      if (i + 1 < dModel) pe[pos][i + 1] = Math.cos(pos * div);
+    }
+  }
+  return pe;
+}
+
+// suma posicion por posicion: embeddings + PE, igual que E[idxs] + PE
+function addMatrices(A, B) {
+  return A.map((row, i) => row.map((v, j) => v + B[i][j]));
+}
+
+/* Se reconstruye w2i a partir de la lista `vocab` exportada (el indice de cada
+   palabra es su posicion en la lista, igual que w2i_cls/w2i_gpt en Python). */
+function buildW2I(vocabList) {
+  const w2i = {};
+  vocabList.forEach((w, i) => { w2i[w] = i; });
+  return w2i;
+}
+
+function tokenizeCls(text, w2i, maxLen) {
+  const words = text.trim().split(/\s+/).slice(0, maxLen - 1);
+  const toks = ['<CLS>', ...words];
+  const idxs = toks.map(t => (t in w2i ? w2i[t] : w2i['<UNK>']));
+  const mask = idxs.map(() => true);
+  while (idxs.length < maxLen) { idxs.push(w2i['<PAD>']); mask.push(false); }
+  return {idxs: idxs.slice(0, maxLen), mask: mask.slice(0, maxLen), tokens: toks};
+}
+
+function tokenizeGpt(text, w2i, maxLen) {
+  const words = text.trim().split(/\s+/).slice(0, maxLen - 2);
+  const toks = ['<BOS>', ...words];
+  const idxs = toks.map(t => (t in w2i ? w2i[t] : w2i['<UNK>']));
+  while (idxs.length < maxLen) idxs.push(w2i['<PAD>']);
+  return {idxs: idxs.slice(0, maxLen), tokens: toks};
+}
+
+function multiHeadAttention(X, weights, nHeads, dK, maskFn) {
+  // X: (T, d_model)
+  const Q = matmul(X, weights.WQ);
+  const K = matmul(X, weights.WK);
+  const V = matmul(X, weights.WV);
+  const T = X.length;
+  const dModel = X[0].length;
+
+  const headOutputs = [];
+  const allAttn = [];
+
+  for (let h = 0; h < nHeads; h++) {
+    const cols = [h * dK, (h + 1) * dK];
+    const Qh = Q.map(r => r.slice(cols[0], cols[1]));
+    const Kh = K.map(r => r.slice(cols[0], cols[1]));
+    const Vh = V.map(r => r.slice(cols[0], cols[1]));
+
+    const scores = matmul(Qh, transpose(Kh)).map(row => row.map(v => v / Math.sqrt(dK)));
+
+    // aplicar mascara (maskFn decide, por posicion (i,j), si va -inf)
+    const masked = scores.map((row, i) => row.map((v, j) => (maskFn(i, j, T) ? -Infinity : v)));
+
+    const attnW = masked.map(softmaxRow);   // softmax fila por fila
+    allAttn.push(attnW);
+
+    const outH = matmul(attnW, Vh);
+    headOutputs.push(outH);
+  }
+
+  // concatenar las cabezas de vuelta a (T, d_model), en el mismo orden
+  const concat = Array.from({length: T}, (_, i) =>
+    headOutputs.flatMap(h => h[i])
+  );
+  const out = matmul(concat, weights.WO);
+  return {out, attn: allAttn};
+}
+
+function feedForward(X, weights) {
+  const h = relu(addBias(matmul(X, weights.W1), weights.bias1));
+  return addBias(matmul(h, weights.W2), weights.bias2);
+}
+
+function encoderForward(text, model) {
+  const {weights, w2i, dModel, nHeads, dK, maxLen, pe} = model;
+  const {idxs, mask, tokens} = tokenizeCls(text, w2i, maxLen);
+
+  const embedded = idxs.map(i => weights.E[i]);
+  const x = addMatrices(embedded, pe);
+
+  const {out: attOut, attn} = multiHeadAttention(x, weights, nHeads, dK,
+    (i, j, T) => !mask[j]);
+
+  const x2 = layerNorm(addMatrices(x, attOut), weights.gamma1, weights.beta1);
+  const ffOut = feedForward(x2, weights);
+  const x3 = layerNorm(addMatrices(x2, ffOut), weights.gamma2, weights.beta2);
+
+  const clsRepr = x3[0];
+  const logits = weights.Wcls[0].map((_, j) =>
+    clsRepr.reduce((s, v, k) => s + v * weights.Wcls[k][j], 0) + weights.bcls[j]
+  );
+
+  const validLen = mask.filter(Boolean).length;
+  return {logits, attn, tokens: tokens.slice(0, validLen)};
+}
+
+function gptForwardAll(idxs, model) {
+  const {weights, dModel, nHeads, dK, pe} = model;
+  const T = idxs.length;
+  const x = addMatrices(idxs.map(i => weights.E[i]), pe.slice(0, T));
+
+  // mascara causal
+  const {out: attOut, attn} = multiHeadAttention(x, weights, nHeads, dK,
+    (i, j) => j > i);
+
+  const x2 = layerNorm(addMatrices(x, attOut), weights.gamma1, weights.beta1);
+  const ffOut = feedForward(x2, weights);
+  const x3 = layerNorm(addMatrices(x2, ffOut), weights.gamma2, weights.beta2);
+
+  const logits = matmul(x3, weights.Wlm).map(row => addRow(row, weights.blm));
+  return {logits, attn};
+}
+function addRow(row, b) { return row.map((v, j) => v + b[j]); }
+
+// muestreo categorico
+function sampleFromProbs(probs) {
+  const r = Math.random();
+  let acc = 0;
+  for (let i = 0; i < probs.length; i++) {
+    acc += probs[i];
+    if (r <= acc) return i;
+  }
+  return probs.length - 1;
+}
+
+function gptGenerate(seedText, model, maxNew, temperature) {
+  const {w2i, i2w, maxLen} = model;
+  let words = seedText.trim().split(/\s+/);
+  for (let step = 0; step < maxNew; step++) {
+    const cur = words.join(' ');
+    const {idxs} = tokenizeGpt(cur, w2i, maxLen);
+    const {logits} = gptForwardAll(idxs, model);
+    const nValid = Math.min(words.length + 1, maxLen - 1);
+    const nextLogits = logits[nValid - 1].map(v => v / temperature);
+
+    // no queremos generar PAD ni BOS de nuevo
+    if (w2i['<PAD>'] !== undefined) nextLogits[w2i['<PAD>']] = -Infinity;
+    if (w2i['<BOS>'] !== undefined) nextLogits[w2i['<BOS>']] = -Infinity;
+
+    const probs = softmaxRow(nextLogits);
+    const nextIdx = sampleFromProbs(probs);
+    const nextWord = i2w[nextIdx];
+
+    if (nextWord === '<EOS>') break;
+    words.push(nextWord);
+  }
+  return words.join(' ');
+}
+
+/* Carga de pesos y conexión con la interfaz */
+let encModel = null;
+let gptModel = null;
+
+function loadModelFromJSON(json) {
+  const w2i = buildW2I(json.vocab);
+  const i2w = {};
+  json.vocab.forEach((w, i) => { i2w[i] = w; });
+  const maxLen = json.max_len;
+  return {
+    weights: json.weights,
+    w2i, i2w,
+    dModel: json.d_model, nHeads: json.n_heads, dK: json.d_k,
+    maxLen,
+    pe: positionalEncoding(maxLen, json.d_model),
+  };
+}
+
+document.getElementById('fileEnc').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const json = JSON.parse(ev.target.result);
+    encModel = loadModelFromJSON(json);
+    document.getElementById('dotEnc').classList.add('ok');
+    document.getElementById('btnCls').disabled = false;
+    document.getElementById('clsHint').textContent = 'Listo. Escribe una oracion y presiona Analizar.';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('fileGpt').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const json = JSON.parse(ev.target.result);
+    gptModel = loadModelFromJSON(json);
+    document.getElementById('dotGpt').classList.add('ok');
+    document.getElementById('btnGpt').disabled = false;
+    document.getElementById('gptHint').textContent = 'Listo. Escribe un texto semilla y presiona Generar.';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('tempSlider').addEventListener('input', e => {
+  document.getElementById('tempVal').textContent = parseFloat(e.target.value).toFixed(1);
+});
+
+function heatColor(v) {
+  // escala secuencial de un solo tono (amber): mas atencion = mas oscuro
+  if (v < 0.1) return 'var(--heat-0)';
+  if (v < 0.25) return 'var(--heat-1)';
+  if (v < 0.45) return 'var(--heat-2)';
+  if (v < 0.7) return 'var(--heat-3)';
+  return 'var(--heat-4)';
+}
+
+function renderHeatmap(attnHeads, tokens) {
+  const n = tokens.length;
+  let html = '<div class="heat-heads">';
+  attnHeads.forEach((headAttn, h) => {
+    html += `<div><div class="heat-block"><h3>Cabeza ${h}</h3>`;
+    html += `<div class="heat-grid" style="grid-template-columns:34px repeat(${n},20px);">`;
+    html += '<div></div>';
+    tokens.forEach(t => { html += `<div class="heat-label">${t}</div>`; });
+    for (let i = 0; i < n; i++) {
+      html += `<div class="heat-rowlabel">${tokens[i]}</div>`;
+      for (let j = 0; j < n; j++) {
+        const v = headAttn[i][j];
+        html += `<div class="heat-cell" style="background:${heatColor(v)}" title="${v.toFixed(2)}"></div>`;
+      }
+    }
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+document.getElementById('btnCls').addEventListener('click', () => {
+  const text = document.getElementById('clsInput').value.toLowerCase().trim();
+  if (!text) return;
+  const {logits, attn, tokens} = encoderForward(text, encModel);
+  const probs = softmaxRow(logits);
+  const isPos = probs[1] > probs[0];
+  const conf = (Math.max(...probs) * 100).toFixed(1);
+
+  let html = `<div class="result-badge ${isPos ? 'pos' : 'neg'}">
+    ${isPos ? 'POSITIVO' : 'NEGATIVO'} · ${conf}% confianza
+  </div>`;
+  html += renderHeatmap(attn, tokens);
+  document.getElementById('clsResultWrap').innerHTML = html;
+});
+
+document.getElementById('btnGpt').addEventListener('click', () => {
+  const seed = document.getElementById('gptInput').value.toLowerCase().trim();
+  if (!seed) return;
+  const temperature = parseFloat(document.getElementById('tempSlider').value);
+  const generated = gptGenerate(seed, gptModel, 6, temperature);
+
+  const {idxs} = tokenizeGpt(generated, gptModel.w2i, gptModel.maxLen);
+  const {attn} = gptForwardAll(idxs, gptModel);
+  const validTokens = generated.split(/\s+/);
+  const tokensForHeat = ['<BOS>', ...validTokens].slice(0, gptModel.maxLen - 1);
+
+  let html = `<div class="gen-output">${generated}</div>`;
+  html += renderHeatmap(attn.map(h => h.slice(0, tokensForHeat.length).map(r => r.slice(0, tokensForHeat.length))), tokensForHeat);
+  document.getElementById('gptResultWrap').innerHTML = html;
+});
+</script>
+</body>
+</html>

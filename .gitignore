@@ -1,1 +1,15 @@
 data/
+checkpoints/
+
+# Datos que el notebook mini-gpt descarga al ejecutarse
+mini-gpt/sst2_*.tsv
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# macOS
+.DS_Store
